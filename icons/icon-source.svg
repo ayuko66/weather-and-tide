@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title description">
+  <title id="title">名古屋 空と海</title>
+  <desc id="description">青空の太陽と海の波を組み合わせたアイコン</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5fb0e8" />
+      <stop offset="0.58" stop-color="#83c8f0" />
+      <stop offset="1" stop-color="#0f6f8c" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="108" fill="url(#sky)" />
+  <circle cx="352" cy="157" r="68" fill="#fff4b8" />
+  <path d="M0 294c58-36 111-36 169 0s111 36 169 0 111-36 174 0v218H0z" fill="#16899f" />
+  <path d="M0 350c58-36 111-36 169 0s111 36 169 0 111-36 174 0v162H0z" fill="#edf7fc" fill-opacity=".92" />
+  <path d="M0 408c58-36 111-36 169 0s111 36 169 0 111-36 174 0v104H0z" fill="#126d68" />
+</svg>

@@ -1,0 +1,251 @@
+# 名古屋 天気・潮汐・釣りスポットダッシュボード — 仕様書
+
+このドキュメントは、`index.html` / `style.css` / `app.js` で実装された天気・潮汐表示アプリの仕様と設計をまとめたものである。他の環境・他のAIエージェントがこの内容だけを読んで同等のアプリを再実装できることを目的とする。
+
+## 1. 概要
+
+- 名古屋市と釣りスポットの午前・午後・翌日の天気予報、名古屋港の潮汐（満潮・干潮・潮名）を1画面で表示する静的Webアプリ。
+- ビルドツール・フレームワーク・サーバーサイド実装は使用しない。素のHTML/CSS/JavaScriptのみで動作し、通常のブラウザ表示に加えてiPhoneのホーム画面からstandalone表示で起動できるPWAとする。
+- ページ読み込み時に2つの外部APIへ独立してfetchし、それぞれの結果を非同期に描画する。片方のAPIが失敗しても、もう片方の表示には影響しない（互いに独立したエラーハンドリング）。
+- APIキーは一切不要（いずれも無料・認証なしの公開API）。
+- GitHub PagesからHTTPSで配信する。Service Workerによるオフラインキャッシュは使用せず、最新の天気・潮汐を表示するにはインターネット接続を必須とする。
+
+## 2. ファイル構成と責務
+
+| ファイル | 責務 |
+|---|---|
+| `index.html` | 静的な骨組み（見出し・スポット選択・ローディング表示・エラー表示・データ表示用の空要素）を定義。DOM要素のidに動的な値を後から差し込む前提の構造。 |
+| `style.css` | 見た目（配色・レイアウト・タイポグラフィ）を定義。ロジックとは完全に分離。 |
+| `app.js` | 定数定義・API呼び出し・レスポンス整形・DOM描画・エラー処理をすべて担当する唯一のスクリプト。 |
+| `manifest.webmanifest` | PWAの名称、起動方法、配色、アイコンを定義。GitHub Pagesのサブパス配信に対応する。 |
+| `icons/` | Apple Touch IconおよびWeb App Manifest用のPNGアイコンを格納する。 |
+
+## 3. データソース（API仕様）
+
+### 3.1 天気: Open-Meteo API
+
+- エンドポイント: `https://api.open-meteo.com/v1/forecast`
+- 認証: 不要（APIキーなし、無料）
+- 名古屋（緯度35.1815, 経度136.9066）の時間別・日別予報を取得する。
+  ```
+  https://api.open-meteo.com/v1/forecast?latitude=35.1815&longitude=136.9066&current_weather=true&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=Asia%2FTokyo
+  ```
+- 時間別に`temperature_2m`、`precipitation_probability`、`weather_code`、`wind_speed_10m`、日別に`temperature_2m_max`、`temperature_2m_min`、`precipitation_probability_max`、`weather_code`、`wind_speed_10m_max`を取得する。
+- 風速単位は`wind_speed_unit=ms`、タイムゾーンは`timezone=Asia/Tokyo`、取得日数は`forecast_days=2`を指定する。
+- レスポンスの主要フィールド:
+  ```jsonc
+  {
+    "hourly": {
+      "time": ["2026-08-12T00:00", ...],
+      "temperature_2m": [25.1, ...],
+      "precipitation_probability": [20, ...],
+      "weather_code": [1, ...],
+      "wind_speed_10m": [3.1, ...]
+    },
+    "daily": {
+      "time": ["2026-08-12", "2026-08-13"],
+      "temperature_2m_max": [33.5, 32.1],
+      "temperature_2m_min": [24.1, 23.8],
+      "precipitation_probability_max": [20, 30],
+      "weather_code": [1, 2],
+      "wind_speed_10m_max": [5.2, 4.8]
+    }
+  }
+  ```
+- CORS: 対応済み。ブラウザから直接fetch可能（確認済み）。
+- WMO weather code → 日本語表示のマッピング（`app.js`内 `WEATHER_CODE_MAP` として実装。未知のコードは「不明 ❔」にフォールバック）:
+
+  | code | 説明 | 絵文字 |
+  |---|---|---|
+  | 0 | 晴れ | ☀️ |
+  | 1 | 晴れ | 🌤️ |
+  | 2 | くもり | ⛅ |
+  | 3 | くもり | ☁️ |
+  | 45, 48 | 霧 | 🌫️ |
+  | 51 | 小雨 | 🌦️ |
+  | 53 | 雨 | 🌦️ |
+  | 55, 61, 63 | 雨 | 🌧️ |
+  | 65 | 強い雨 | 🌧️ |
+  | 71, 73, 77 | 雪 | ❄️ |
+  | 75 | 強い雪 | ❄️ |
+  | 80, 81 | にわか雨 | 🌦️ |
+  | 82 | 激しいにわか雨 | 🌧️ |
+  | 95, 96 | 雷雨 | ⛈️ |
+  | 99 | 激しい雷雨 | ⛈️ |
+
+### 3.2 潮汐: tide736.net API
+
+- 提供元: [tide736.net](https://tide736.net/)（日本沿岸736港の潮汐データを無料公開。APIキー不要）
+- エンドポイント: `https://tide736.net/api/get_tide.php`
+  - 注意: ホスト名は `tide736.net`（`api.tide736.net` ではない）。`/api/` はパスの一部。
+- パラメータ（すべてGETクエリ）:
+  | パラメータ | 意味 | 名古屋港での値 |
+  |---|---|---|
+  | `pc` | 都道府県コード | `23`（愛知県） |
+  | `hc` | 港コード（都道府県内での連番） | `17`（名古屋） |
+  | `yr` | 年 | 例: `2026` |
+  | `mn` | 月（ゼロ埋め不要） | 例: `8` |
+  | `dy` | 日（ゼロ埋め不要） | 例: `12` |
+  | `rg` | 取得範囲 | `day`（1日分） |
+- 呼び出し例:
+  ```
+  https://tide736.net/api/get_tide.php?pc=23&hc=17&yr=2026&mn=8&dy=12&rg=day
+  ```
+- 都道府県コード・港コードの調べ方: `https://tide736.net/api/get_harbor.php?pc=<都道府県コード>` を呼ぶと、その都道府県内の港一覧（`harbor_code`と`harbor_namej`）がJSONで返る。都道府県コードはJIS都道府県コード（愛知=23など）と一致することを確認済み。
+- レスポンスの主要フィールド（`status`が`1`なら正常）:
+  ```jsonc
+  {
+    "status": 1,
+    "tide": {
+      "port": { "harbor_namej": "名古屋", "latitude": 35.05, "longitude": 136.53, /* ... */ },
+      "chart": {
+        "2026-08-12": {                       // "YYYY-MM-DD" 形式のキー（現地日付）
+          "moon": { "title": "大潮" },        // 大潮/中潮/小潮などの潮名
+          "flood": [                           // 満潮（1日1〜2回）
+            { "time": "05:07", "cm": 239.5 }
+          ],
+          "edd": [                             // 干潮（1日1〜2回）
+            { "time": "11:45", "cm": 12.9 }
+          ],
+          "tide": [                            // 1時間ごとの潮位（本アプリでは未使用）
+            { "time": "00:00", "cm": 180.2 }
+          ]
+        }
+      }
+    }
+  }
+  ```
+- `chart`オブジェクトのキーはクエリで指定した`yr/mn/dy`に対応する`"YYYY-MM-DD"`文字列（月・日は2桁ゼロ埋め）。このキーで当日データを取り出す。
+- CORS: 対応済み（レスポンスヘッダに`access-control-allow-origin: *`）。ブラウザから直接fetch可能（確認済み）。
+- エラー時は`status`が`0`になり、`message`にエラー内容（日本語、Unicodeエスケープ）が入る。
+
+### 3.3 釣りスポット天気: Open-Meteo API
+
+- 3.1と同じOpen-Meteo APIを、選択されたスポットの緯度・経度で呼び出す。
+- 3.1と同じ時間別・日別フィールドを取得し、同じ3区分で表示する。
+- 対象スポットは以下の6地点。座標は各施設・公園周辺の代表地点であり、局所的な観測値ではなく周辺予報として扱う。
+
+  | id | 表示名 | 緯度 | 経度 |
+  |---|---|---:|---:|
+  | `shinmaiko` | 新舞子マリンパーク | 34.9497 | 136.8180 |
+  | `rinku` | りんくう釣り護岸 | 34.8820 | 136.8250 |
+  | `kasumi` | 四日市港・霞地区魚釣り施設 | 35.0130 | 136.6580 |
+  | `hekinan` | 碧南釣り広場 | 34.8290 | 136.9600 |
+  | `inae` | 稲永公園周辺 | 35.0790 | 136.8500 |
+  | `taketoyo` | 武豊緑地 | 34.8460 | 136.9200 |
+
+- 「碧南釣り広場」は「碧南海釣り公園」「中部電力釣り広場」と呼ばれる地点と同一であるため、重複登録しない。
+- スポット選択を変更するたびに、その地点の予報を新たに取得する。
+- スポットの天気取得失敗は、名古屋市の天気・名古屋港の潮汐に影響させない。
+
+## 4. アプリケーションロジック（app.js）
+
+### 4.1 定数
+- `NAGOYA_LAT = 35.1815`, `NAGOYA_LON = 136.9066` — 天気取得対象地点
+- `PREFECTURE_CODE = 23`, `HARBOR_CODE = 17` — 潮汐取得対象港
+- `WEATHER_CODE_MAP` — WMOコード→[説明, 絵文字] の対応表
+- `FISHING_SPOTS` — 釣りスポットid、表示名、補足名、緯度、経度の配列
+
+### 4.2 天気フロー
+1. `fetchWeather()`: Open-Meteo APIから2日分の時間別・日別予報をfetch。`response.ok`が`false`ならエラーをthrow。
+2. `buildForecastPeriods(data)`: 本日9:00を「午前」、本日15:00を「午後」、翌日の日次予報を「明日」として3区分の表示データを生成する。
+3. `renderForecastPeriods(container, periods)`: 3区分をDOM要素として生成する。午前・午後は天気、気温、降水確率、風速、明日は天気、最高・最低気温、最大降水確率、最大風速を表示する。
+4. `renderWeather(data)`: 3区分の予報を名古屋市天気カードへ描画し、ローディング表示を隠してコンテンツを表示する。
+5. `renderWeatherError(message)`: ローディングを隠し、エラー要素にメッセージを表示。
+6. `loadWeather()`: 上記をtry/catchで実行するエントリポイント。
+
+### 4.3 潮汐フロー
+1. `todayKey()`: `new Date()`から`yr`/`mn`/`dy`と、`chart`のキーと同じ形式の`"YYYY-MM-DD"`文字列（`key`）を生成。
+2. `fetchTide()`: tide736.net APIをfetch。HTTPエラー、`status !== 1`、当日キーが`chart`に存在しない場合はそれぞれエラーをthrow。
+3. `buildTideListItems(listEl, events)`: 満潮/干潮の配列を受け取り、`<li>`要素（時刻＋潮位cm）を`createElement`で生成して指定の`<ul>`に描画（命令的DOM構築、innerHTMLテンプレートは使わない）。
+4. `renderTide(chart)`: 潮名（`moon.title`）を表示し、`flood`/`edd`それぞれを`buildTideListItems`で描画。ローディングを隠し、コンテンツを表示。
+5. `renderTideError(message)` / `loadTide()`: 天気側と対称の構造。
+
+### 4.4 初期化
+- `document.getElementById("today-date")`に本日の日付（`M月D日(曜日)`形式、`formatToday()`で生成）をセット。
+- 釣りスポット選択肢を`FISHING_SPOTS`から生成し、初期地点の予報を取得する。
+- `loadWeather()`、`loadTide()`、`loadSpotWeather()`をページ読み込み時に呼び出し、3系統を並行して非同期実行する（`await`で直列化しない）。
+- スポット選択変更時は、選択された地点だけを`loadSpotWeather()`で再取得する。
+
+### 4.5 釣りスポット天気フロー
+
+1. `populateSpotSelect()`: `FISHING_SPOTS`から`option`要素を生成する。
+2. `fetchSpotWeather(spot)`: 選択地点の座標でOpen-Meteo APIをfetchする。
+3. `renderSpotWeather(data, spot)`: 地点名と、午前・午後・明日の3区分予報を描画する。
+4. `renderSpotWeatherError(message)` / `loadSpotWeather()`: 他のデータ系統から独立してエラーを処理する。
+
+### 4.6 エラーハンドリングの設計方針
+- 名古屋市の天気、潮汐、釣りスポット天気は完全に独立したtry/catchブロックを持ち、一方の失敗が他方の表示ロジックに影響しない。
+- ユーザー向けエラーメッセージはすべて日本語。
+- ローディング表示 → （成功時）コンテンツ表示 or （失敗時）エラー表示、という3状態をCSSクラス`hidden`の付け外しで管理する（フレームワークのstate管理は使わない）。
+
+## 5. UI/デザイン仕様
+
+- テーマ: 「空」と「海」の2トーン。天気カードは空色系グラデーション（`#5fb0e8 → #a9d9f7`）、潮汐カードは海色系グラデーション（`#0f6f8c → #2fa9b8`）で視覚的に区別する。
+- レイアウト: 縦積みの3カード構成（名古屋市天気・名古屋港潮汐・釣りスポット天気）。最大幅480px、中央寄せ。各カードは角丸16px・白文字・ドロップシャドウ。
+- 数値の強調: 各時間帯の気温と満潮/干潮の潮位を太字で表示する。
+- アクセント: 天気は絵文字アイコン（`.weather-icon`）、潮汐は潮名バッジ（`.moon-badge`、半透明の丸ピル型）。
+- 釣りスポットカードは青緑から深緑のグラデーションとし、白文字のセレクトボックスを配置する。
+- 釣りスポットカードには「現地の立入禁止・釣り禁止表示、施設の利用時間を確認する」旨の注意書きを常時表示する。
+- レスポンシブ: 特別なメディアクエリは組まず、flexboxの`flex-wrap`により狭い画面でも自然に折り返す最低限の対応のみ。
+- 意図的にTODOアプリ等の既存UIとは配色・レイアウトを共有しない、本アプリ専用の見た目とすること。
+
+## 6. 他環境への移植時の変更点（チェックリスト）
+
+別の都市・港に対応させる場合、変更が必要なのは以下のみ（ロジック構造は変更不要）:
+
+1. `NAGOYA_LAT` / `NAGOYA_LON` — 対象都市の緯度経度に変更。
+2. `PREFECTURE_CODE` / `HARBOR_CODE` — `https://tide736.net/api/get_harbor.php?pc=<都道府県コード>` で対象都道府県の港一覧を取得し、目的の港の`harbor_code`を確認して設定。都道府県コードはJIS都道府県コード（1=北海道〜47=沖縄）と一致。
+3. タイトル文言（`index.html`内「名古屋 天気・潮汐」等）とCSSのテーマカラー（任意）。
+4. 対象地点が海に面していない場合は潮汐APIが該当データを持たないため、潮汐カードごと省略する。
+
+fetch先URL・レスポンス構造・エラーハンドリングの実装パターンはそのまま再利用可能。
+
+## 7. 動作確認方法
+
+1. `index.html` をブラウザで直接開く（サーバー不要）。
+2. 名古屋市天気カードに午前9時・午後3時・明日の予報が表示されることを確認。
+3. 潮汐カードに潮名（大潮/中潮/小潮等）、満潮・干潮それぞれの時刻と潮位(cm)が表示されることを確認。
+4. 釣りスポットを変更し、地点名と予報が選択に応じて更新されることを確認。
+5. 釣りスポットカードに午前9時・午後3時・明日の天気、気温、降水確率、風速が表示されることを確認。
+6. ブラウザの開発者ツールでネットワークタブを開き、各fetchリクエストがそれぞれ200 OKで返っていることを確認。
+7. （任意）ネットワークを切断した状態で再読み込みし、天気・潮汐・スポット予報それぞれのカードに日本語のエラーメッセージが個別に表示されることを確認。
+
+## 8. iPhoneホーム画面Webアプリ（PWA）仕様
+
+### 8.1 配信と起動方式
+
+- GitHubのPublicリポジトリ`weather-and-tide`の`main`ブランチを正本とし、GitHub Pagesでリポジトリのルートを公開する。
+- 公開URLは`https://<GitHubユーザー名>.github.io/weather-and-tide/`形式とする。
+- iPhoneではSafariで公開URLを開き、共有メニューの「ホーム画面に追加」からインストールする。
+- ホーム画面からの起動時はブラウザのアドレスバーを表示しない`standalone`モードを使用する。
+- App Store配布、Xcodeプロジェクト、ネイティブラッパー、プッシュ通知、バックグラウンド更新は対象外とする。
+
+### 8.2 Web App Manifest
+
+- `manifest.webmanifest`に`name`、`short_name`、`lang: ja`、`display: standalone`、`theme_color`、`background_color`を定義する。
+- `start_url`と`scope`は`./`とし、GitHub Pagesの`/weather-and-tide/`サブパスでも正しく起動できるようにする。
+- PNGアイコンは192×192pxと512×512pxを用意し、それぞれ通常用途（`purpose: any`）とmaskable用途（`purpose: maskable`）をManifestへ登録する。
+- iPhone用に180×180pxのApple Touch Iconを用意し、`index.html`から明示的に参照する。
+
+### 8.3 iPhone表示
+
+- viewportに`viewport-fit=cover`を指定する。
+- 画面上端のノッチおよび下端のホームインジケータとコンテンツが重ならないよう、`env(safe-area-inset-top)`と`env(safe-area-inset-bottom)`をレイアウト余白へ加算する。
+- `theme-color`、Apple用standalone設定、ステータスバー表示設定を`index.html`に定義する。
+- 既存の最小幅320pxとカードの折り返し動作を維持し、縦向き・横向きの双方で横スクロールを発生させない。
+
+### 8.4 通信・オフライン時の挙動
+
+- Service Workerは登録せず、アプリシェルおよびAPIレスポンスの永続的なオフラインキャッシュは実装しない。
+- 最新予報の取得にはインターネット接続が必要であることをREADMEに明記する。
+- 圏外やAPI障害時は、既存の3系統（名古屋市天気、潮汐、釣りスポット天気）の独立した日本語エラー表示を使用する。
+
+### 8.5 PWA動作確認
+
+1. Docker上の静的WebサーバーからHTML、CSS、JavaScript、Manifest、全PNGアイコンがHTTP 200で取得できることを確認する。
+2. Manifestが正しいJSONであり、相対URL、アイコン寸法、`display: standalone`が仕様どおりであることを確認する。
+3. iPhone相当の狭い画面でカード、セレクト、safe area、縦横表示に崩れや横スクロールがないことを確認する。
+4. GitHub Pages上で3系統のAPI取得とスポット変更が正常に動作することを確認する。
+5. iPhone Safariからホーム画面へ追加し、専用アイコン、standalone表示、終了後の再起動が正常であることを実機確認する。
+6. 通信を切って再読み込みし、3つのカードがそれぞれ独立して日本語のエラーを表示することを確認する。

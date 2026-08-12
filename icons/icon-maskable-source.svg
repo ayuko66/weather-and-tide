@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title description">
+  <title id="title">名古屋 空と海 maskable</title>
+  <desc id="description">安全領域内に青空の太陽と海の波を配置したアイコン</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5fb0e8" />
+      <stop offset="0.58" stop-color="#83c8f0" />
+      <stop offset="1" stop-color="#0f6f8c" />
+    </linearGradient>
+    <clipPath id="safe"><circle cx="256" cy="256" r="205" /></clipPath>
+  </defs>
+  <rect width="512" height="512" fill="#0f6f8c" />
+  <g clip-path="url(#safe)">
+    <rect x="51" y="51" width="410" height="410" fill="url(#sky)" />
+    <circle cx="333" cy="177" r="54" fill="#fff4b8" />
+    <path d="M51 287c47-29 89-29 135 0s89 29 135 0 89-29 140 0v174H51z" fill="#16899f" />
+    <path d="M51 332c47-29 89-29 135 0s89 29 135 0 89-29 140 0v129H51z" fill="#edf7fc" fill-opacity=".92" />
+    <path d="M51 378c47-29 89-29 135 0s89 29 135 0 89-29 140 0v83H51z" fill="#126d68" />
+  </g>
+</svg>

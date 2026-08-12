@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="description" content="名古屋市の天気と名古屋港の潮汐をまとめて確認できるダッシュボード" />
+    <meta name="theme-color" content="#0f6f8c" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="名古屋 空と海" />
+    <title>名古屋 天気・潮汐</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png" />
+    <link rel="stylesheet" href="style.css" />
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <main class="dashboard">
+      <header class="page-header">
+        <p class="eyebrow">NAGOYA DAILY REPORT</p>
+        <h1>名古屋の空と海</h1>
+        <p id="today-date" class="today-date" aria-label="今日の日付"></p>
+      </header>
+
+      <section class="card card-weather" aria-labelledby="weather-title">
+        <div class="card-decoration weather-sun" aria-hidden="true"></div>
+        <header class="card-header">
+          <div>
+            <p class="card-kicker">WEATHER</p>
+            <h2 id="weather-title">名古屋市の天気</h2>
+          </div>
+          <span class="location-mark" aria-hidden="true">⌖</span>
+        </header>
+
+        <div id="weather-loading" class="loading" role="status">
+          <span class="loading-dot" aria-hidden="true"></span>
+          空の様子を確認しています
+        </div>
+        <p id="weather-error" class="error hidden" role="alert"></p>
+
+        <div id="weather-content" class="card-content hidden">
+          <div id="weather-forecast" class="forecast-grid"></div>
+        </div>
+      </section>
+
+      <section class="card card-tide" aria-labelledby="tide-title">
+        <div class="wave-lines" aria-hidden="true"><span></span><span></span><span></span></div>
+        <header class="card-header">
+          <div>
+            <p class="card-kicker">TIDE</p>
+            <h2 id="tide-title">名古屋港の潮汐</h2>
+          </div>
+          <span class="moon-mark" aria-hidden="true">◐</span>
+        </header>
+
+        <div id="tide-loading" class="loading" role="status">
+          <span class="loading-dot" aria-hidden="true"></span>
+          潮の動きを確認しています
+        </div>
+        <p id="tide-error" class="error hidden" role="alert"></p>
+
+        <div id="tide-content" class="card-content hidden">
+          <div class="moon-row">
+            <span class="moon-label">今日の潮</span>
+            <strong id="moon-title" class="moon-badge"></strong>
+          </div>
+          <div class="tide-columns">
+            <section class="tide-group" aria-labelledby="flood-title">
+              <h3 id="flood-title"><span aria-hidden="true">↟</span> 満潮</h3>
+              <ul id="flood-list" class="tide-list"></ul>
+            </section>
+            <section class="tide-group" aria-labelledby="ebb-title">
+              <h3 id="ebb-title"><span aria-hidden="true">↡</span> 干潮</h3>
+              <ul id="ebb-list" class="tide-list"></ul>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <section class="card card-spot" aria-labelledby="spot-title">
+        <div class="spot-rings" aria-hidden="true"></div>
+        <header class="card-header">
+          <div>
+            <p class="card-kicker">FISHING FORECAST</p>
+            <h2 id="spot-title">釣りスポット予報</h2>
+          </div>
+          <span class="fish-mark" aria-hidden="true">◁</span>
+        </header>
+
+        <label class="spot-select-label" for="spot-select">スポットを選択</label>
+        <div class="select-wrap">
+          <select id="spot-select" aria-describedby="spot-alias spot-notice"></select>
+        </div>
+        <p id="spot-alias" class="spot-alias"></p>
+
+        <div id="spot-loading" class="loading spot-loading" role="status">
+          <span class="loading-dot" aria-hidden="true"></span>
+          現地の予報を確認しています
+        </div>
+        <p id="spot-error" class="error hidden" role="alert"></p>
+
+        <div id="spot-content" class="card-content hidden">
+          <div id="spot-forecast" class="forecast-grid"></div>
+        </div>
+
+        <p id="spot-notice" class="spot-notice">安全のため、現地の立入禁止・釣り禁止表示と施設の利用時間を必ず確認してください。</p>
+      </section>
+
+      <footer class="page-footer">名古屋の空と海、周辺の釣り日和をひとつに</footer>
+    </main>
+  </body>
+</html>
