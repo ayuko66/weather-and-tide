@@ -5,10 +5,10 @@
 
 ## iPhoneで使う
 
-公開URLは、GitHub Pagesの設定完了後に次の形式になります。
+公開URLは次のとおりです。
 
 ```text
-https://<GitHubユーザー名>.github.io/weather-and-tide/
+https://ayuko66.github.io/weather-and-tide/
 ```
 
 1. iPhoneのSafariで公開URLを開く

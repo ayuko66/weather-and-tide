@@ -216,7 +216,7 @@ fetch先URL・レスポンス構造・エラーハンドリングの実装パタ
 ### 8.1 配信と起動方式
 
 - GitHubのPublicリポジトリ`weather-and-tide`の`main`ブランチを正本とし、GitHub Pagesでリポジトリのルートを公開する。
-- 公開URLは`https://<GitHubユーザー名>.github.io/weather-and-tide/`形式とする。
+- 公開URLは`https://ayuko66.github.io/weather-and-tide/`とする。
 - iPhoneではSafariで公開URLを開き、共有メニューの「ホーム画面に追加」からインストールする。
 - ホーム画面からの起動時はブラウザのアドレスバーを表示しない`standalone`モードを使用する。
 - App Store配布、Xcodeプロジェクト、ネイティブラッパー、プッシュ通知、バックグラウンド更新は対象外とする。
