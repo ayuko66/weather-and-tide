@@ -60,20 +60,47 @@
         <p id="tide-error" class="error hidden" role="alert"></p>
 
         <div id="tide-content" class="card-content hidden">
-          <div class="moon-row">
-            <span class="moon-label">今日の潮</span>
-            <strong id="moon-title" class="moon-badge"></strong>
-          </div>
-          <div class="tide-columns">
-            <section class="tide-group" aria-labelledby="flood-title">
-              <h3 id="flood-title"><span aria-hidden="true">↟</span> 満潮</h3>
-              <ul id="flood-list" class="tide-list"></ul>
-            </section>
-            <section class="tide-group" aria-labelledby="ebb-title">
-              <h3 id="ebb-title"><span aria-hidden="true">↡</span> 干潮</h3>
-              <ul id="ebb-list" class="tide-list"></ul>
-            </section>
-          </div>
+          <article id="today-tide" class="tide-day" aria-labelledby="today-tide-label">
+            <div class="moon-row">
+              <div>
+                <h3 id="today-tide-label" class="tide-day-label">今日</h3>
+                <span id="today-tide-date" class="moon-label"></span>
+              </div>
+              <strong id="today-moon-title" class="moon-badge"></strong>
+            </div>
+            <p id="today-tide-error" class="tide-day-error hidden" role="status"></p>
+            <div id="today-tide-data" class="tide-columns">
+              <section class="tide-group" aria-labelledby="today-flood-title">
+                <h4 id="today-flood-title"><span aria-hidden="true">↟</span> 満潮</h4>
+                <ul id="today-flood-list" class="tide-list"></ul>
+              </section>
+              <section class="tide-group" aria-labelledby="today-ebb-title">
+                <h4 id="today-ebb-title"><span aria-hidden="true">↡</span> 干潮</h4>
+                <ul id="today-ebb-list" class="tide-list"></ul>
+              </section>
+            </div>
+          </article>
+
+          <article id="tomorrow-tide" class="tide-day" aria-labelledby="tomorrow-tide-label">
+            <div class="moon-row">
+              <div>
+                <h3 id="tomorrow-tide-label" class="tide-day-label">明日</h3>
+                <span id="tomorrow-tide-date" class="moon-label"></span>
+              </div>
+              <strong id="tomorrow-moon-title" class="moon-badge"></strong>
+            </div>
+            <p id="tomorrow-tide-error" class="tide-day-error hidden" role="status"></p>
+            <div id="tomorrow-tide-data" class="tide-columns">
+              <section class="tide-group" aria-labelledby="tomorrow-flood-title">
+                <h4 id="tomorrow-flood-title"><span aria-hidden="true">↟</span> 満潮</h4>
+                <ul id="tomorrow-flood-list" class="tide-list"></ul>
+              </section>
+              <section class="tide-group" aria-labelledby="tomorrow-ebb-title">
+                <h4 id="tomorrow-ebb-title"><span aria-hidden="true">↡</span> 干潮</h4>
+                <ul id="tomorrow-ebb-list" class="tide-list"></ul>
+              </section>
+            </div>
+          </article>
         </div>
       </section>
 
