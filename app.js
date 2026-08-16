@@ -34,13 +34,21 @@ function formatToday() {
 }
 
 function todayKey() {
+  return tideDate(0);
+}
+
+function tideDate(offsetDays) {
+  const date = new Date(Date.now() + offsetDays * 24 * 60 * 60 * 1000);
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Tokyo", year: "numeric", month: "2-digit", day: "2-digit",
-  }).formatToParts(new Date());
+  }).formatToParts(date);
   const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
   return {
     yr: Number(values.year), mn: Number(values.month), dy: Number(values.day),
     key: `${values.year}-${values.month}-${values.day}`,
+    displayDate: new Intl.DateTimeFormat("ja-JP", {
+      timeZone: "Asia/Tokyo", month: "numeric", day: "numeric", weekday: "short",
+    }).format(date),
   };
 }
 
@@ -156,16 +164,33 @@ async function loadWeather() {
   catch (error) { renderWeatherError(error instanceof Error ? error.message : "時間をおいて再度お試しください。"); }
 }
 
-async function fetchTide() {
-  const { yr, mn, dy, key } = todayKey();
+async function fetchTideDate(dateInfo) {
+  const { yr, mn, dy, key } = dateInfo;
   const params = new URLSearchParams({ pc: PREFECTURE_CODE, hc: HARBOR_CODE, yr, mn, dy, rg: "day" });
   const response = await fetch(`https://tide736.net/api/get_tide.php?${params}`);
   if (!response.ok) throw new Error(`潮汐APIから応答がありません（${response.status}）。`);
   const data = await response.json();
   if (Number(data.status) !== 1) throw new Error(data.message || "潮汐データを取得できませんでした。");
   const chart = data.tide?.chart?.[key];
-  if (!chart) throw new Error("本日の潮汐データが見つかりませんでした。");
+  if (!chart) throw new Error("指定日の潮汐データが見つかりませんでした。");
   return chart;
+}
+
+async function fetchTide() {
+  const days = [
+    { id: "today", label: "今日", dateInfo: tideDate(0) },
+    { id: "tomorrow", label: "明日", dateInfo: tideDate(1) },
+  ];
+  const results = await Promise.allSettled(days.map(({ dateInfo }) => fetchTideDate(dateInfo)));
+  const tideDays = days.map((day, index) => ({
+    ...day,
+    chart: results[index].status === "fulfilled" ? results[index].value : null,
+    error: results[index].status === "rejected"
+      ? (results[index].reason instanceof Error ? results[index].reason.message : "データを取得できませんでした。")
+      : null,
+  }));
+  if (tideDays.every(({ chart }) => !chart)) throw new Error("今日と明日の潮汐データを取得できませんでした。");
+  return tideDays;
 }
 
 function buildTideListItems(listEl, events) {
@@ -190,10 +215,26 @@ function buildTideListItems(listEl, events) {
   });
 }
 
-function renderTide(chart) {
-  byId("moon-title").textContent = chart.moon?.title || "不明";
-  buildTideListItems(byId("flood-list"), chart.flood);
-  buildTideListItems(byId("ebb-list"), chart.edd);
+function renderTideDay(day) {
+  byId(`${day.id}-tide-date`).textContent = day.dateInfo.displayDate;
+  const data = byId(`${day.id}-tide-data`);
+  const error = byId(`${day.id}-tide-error`);
+  if (!day.chart) {
+    byId(`${day.id}-moon-title`).textContent = "取得不可";
+    error.textContent = `${day.label}の潮汐を表示できませんでした。${day.error}`;
+    error.classList.remove("hidden");
+    data.classList.add("hidden");
+    return;
+  }
+  byId(`${day.id}-moon-title`).textContent = day.chart.moon?.title || "不明";
+  buildTideListItems(byId(`${day.id}-flood-list`), day.chart.flood);
+  buildTideListItems(byId(`${day.id}-ebb-list`), day.chart.edd);
+  error.classList.add("hidden");
+  data.classList.remove("hidden");
+}
+
+function renderTide(days) {
+  days.forEach(renderTideDay);
   showState("tide", "content");
 }
 

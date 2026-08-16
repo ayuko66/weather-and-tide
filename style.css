@@ -86,16 +86,20 @@ h1 { margin: 0; font-size: clamp(27px, 8vw, 36px); line-height: 1.2; letter-spac
 
 .wave-lines { position: absolute; right: -35px; bottom: -5px; z-index: -1; width: 250px; opacity: .15; transform: rotate(-7deg); }
 .wave-lines span { display: block; width: 100%; height: 38px; margin-top: -20px; border: 2px solid white; border-color: white transparent transparent; border-radius: 50%; }
-.moon-row { display: flex; align-items: center; justify-content: space-between; margin: 24px 0 20px; padding-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,.22); }
+.tide-day { padding-top: 22px; }
+.tide-day + .tide-day { margin-top: 24px; border-top: 1px solid rgba(255,255,255,.24); }
+.moon-row { display: flex; align-items: center; justify-content: space-between; margin: 0 0 16px; }
+.tide-day-label { margin: 0 0 3px; font-size: 17px; }
 .moon-label { color: rgba(255,255,255,.72); font-size: 12px; }
 .moon-badge { min-width: 63px; padding: 7px 16px; border: 1px solid rgba(255,255,255,.38); border-radius: 999px; background: rgba(255,255,255,.17); text-align: center; letter-spacing: .09em; }
 .tide-columns { display: flex; flex-wrap: wrap; gap: 14px; }
 .tide-group { flex: 1 1 160px; padding: 15px 16px; border-radius: 12px; background: rgba(3,69,86,.2); }
-.tide-group h3 { margin: 0 0 10px; color: rgba(255,255,255,.76); font-size: 12px; letter-spacing: .08em; }
+.tide-group h4 { margin: 0 0 10px; color: rgba(255,255,255,.76); font-size: 12px; letter-spacing: .08em; }
 .tide-list { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; }
 .tide-list li { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .tide-time { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .tide-cm { font-size: 13px; font-weight: 800; }
+.tide-day-error { margin: 0; padding: 14px 16px; border-radius: 10px; background: rgba(71,20,20,.24); color: #fff; font-size: 13px; line-height: 1.6; }
 .empty-data { color: rgba(255,255,255,.72); font-size: 13px; }
 
 .spot-rings {
