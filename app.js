@@ -68,7 +68,7 @@ async function fetchWeather() {
   const params = new URLSearchParams({
     latitude: NAGOYA_LAT, longitude: NAGOYA_LON,
     hourly: "temperature_2m,precipitation_probability,weather_code,wind_speed_10m",
-    daily: "temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code,wind_speed_10m_max",
+    daily: "temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code,wind_speed_10m_max,sunrise,sunset",
     timezone: "Asia/Tokyo", forecast_days: "2", wind_speed_unit: "ms",
   });
   const response = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
@@ -151,6 +151,13 @@ function renderForecastPeriods(container, periods) {
 
 function renderWeather(data) {
   renderForecastPeriods(byId("weather-forecast"), buildForecastPeriods(data));
+  const todayIndex = data.daily.time.indexOf(todayKey().key);
+  const formatSunTime = (value) => {
+    const match = typeof value === "string" ? value.match(/T(\d{2}):(\d{2})/) : null;
+    return match ? `${Number(match[1])}:${match[2]}` : "--:--";
+  };
+  byId("sunrise-time").textContent = formatSunTime(data.daily.sunrise?.[todayIndex]);
+  byId("sunset-time").textContent = formatSunTime(data.daily.sunset?.[todayIndex]);
   showState("weather", "content");
 }
 
