@@ -241,12 +241,13 @@ fetch先URL・レスポンス構造・エラーハンドリングの実装パタ
 ### 8.4 通信・オフライン時の挙動
 
 - Service Workerは登録せず、アプリシェルおよびAPIレスポンスの永続的なオフラインキャッシュは実装しない。
+- `style.css`と`app.js`の参照URLにはバージョンクエリ（例: `?v=2`）を付与し、両ファイルの更新時は値を変更する。これにより、GitHub Pages更新後に古いCSSやJavaScriptがブラウザキャッシュから再利用されることを防ぐ。
 - 最新予報の取得にはインターネット接続が必要であることをREADMEに明記する。
 - 圏外やAPI障害時は、既存の3系統（名古屋市天気、潮汐、釣りスポット天気）の独立した日本語エラー表示を使用する。
 
 ### 8.5 PWA動作確認
 
-1. Docker上の静的WebサーバーからHTML、CSS、JavaScript、Manifest、全PNGアイコンがHTTP 200で取得できることを確認する。
+1. Docker上の静的WebサーバーからHTML、バージョンクエリ付きのCSSとJavaScript、Manifest、全PNGアイコンがHTTP 200で取得できることを確認する。
 2. Manifestが正しいJSONであり、相対URL、アイコン寸法、`display: standalone`が仕様どおりであることを確認する。
 3. iPhone相当の狭い画面でカード、セレクト、safe area、縦横表示に崩れや横スクロールがないことを確認する。
 4. GitHub Pages上で3系統のAPI取得とスポット変更が正常に動作することを確認する。
